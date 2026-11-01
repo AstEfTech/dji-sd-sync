@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sorts DJI files on an SD card into YYYY-MM-DD_ folders and copies them to a local folder.
+# Sorts DJI files on an SD card into YYYY-MM-DD folders and copies them to a local folder.
 # Pure POSIX sh, no dependencies beyond basic utilities (cp, mv, mkdir, wc, sync).
 #
 #   dji_import.sh [-s DCIM] [-d DEST]
@@ -38,7 +38,7 @@ is_valid_date() {
     [ "$_d" -le "$_max" ]
 }
 
-# date_dir_name DJI_20241015... -> prints 2024-10-15_ ; returns 1 if not a dated DJI file
+# date_dir_name DJI_20241015... -> prints 2024-10-15 ; returns 1 if not a dated DJI file
 date_dir_name() {
     case $1 in DJI_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*) ;; *) return 1 ;; esac
     s=${1#DJI_}
@@ -48,10 +48,10 @@ date_dir_name() {
     rest=${rest#??}
     d=$(printf %.2s "$rest")
     is_valid_date "$y" "$m" "$d" || return 1
-    printf '%s-%s-%s_' "$y" "$m" "$d"
+    printf '%s-%s-%s' "$y" "$m" "$d"
 }
 
-# group_by_date DIR - moves DJI_YYYYMMDD* files from DIR into DIR/YYYY-MM-DD_/
+# group_by_date DIR - moves DJI_YYYYMMDD* files from DIR into DIR/YYYY-MM-DD/
 group_by_date() {
     for f in "$1"/*; do
         [ -f "$f" ] || continue
@@ -86,7 +86,7 @@ for card_dir in "$SOURCE"/DJI_*; do
     group_by_date "$card_dir"
     # copy every dated folder: if a previous run was interrupted after sorting,
     # the files still get copied; already-copied ones are skipped by size
-    for dated in "$card_dir"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_; do
+    for dated in "$card_dir"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]; do
         [ -d "$dated" ] || continue
         sub=${dated##*/}
         mkdir -p "$DEST/$sub"

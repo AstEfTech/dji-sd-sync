@@ -5,7 +5,7 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
 ## What it does
 
 1. Looks for `DCIM/DJI_*` on the card.
-2. Sorts `DJI_YYYYMMDD…` files into `YYYY-MM-DD_` subfolders on the card itself. Dates are properly validated (leap years, month 13, etc.); unrelated files stay where they are.
+2. Sorts `DJI_YYYYMMDD…` files into `YYYY-MM-DD` subfolders on the card itself. Dates are properly validated (leap years, month 13, etc.); unrelated files stay where they are.
 3. Copies all dated folders to the destination folder, keeping the same structure:
    - via a temporary `.part` file and `mv`, so an incomplete file never looks finished;
    - a file with the same size is skipped, so re-running is safe and picks up whatever was not copied yet;
@@ -14,8 +14,8 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
 
 ```
 card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
- ->    DCIM/DJI_001/2024-10-15_/DJI_20241015100000_0001_D.MP4
- ->    <DEST>/2024-10-15_/DJI_20241015100000_0001_D.MP4
+ ->    DCIM/DJI_001/2024-10-15/DJI_20241015100000_0001_D.MP4
+ ->    <DEST>/2024-10-15/DJI_20241015100000_0001_D.MP4
 ```
 
 ## Manual run
