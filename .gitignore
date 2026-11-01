@@ -3,3 +3,6 @@
 
 # import log written when running the script from this folder
 log/
+
+# editor settings
+.vscode/
