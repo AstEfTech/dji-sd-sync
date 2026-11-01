@@ -11,7 +11,7 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
    - a file with the same size is skipped;
    - file modification times are preserved.
 4. Runs `sync`. **Files on the card are never deleted.**
-5. Writes a timestamped log to `log/import.log` next to the script (`DJI_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
+5. Writes a timestamped log to `log/import.log` next to the script (`SD_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
 
 ```
 card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
@@ -25,20 +25,20 @@ card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
 sh dji_import.sh -s /mnt/sd/DCIM -d ~/storage/dji
 ```
 
-Without flags it uses `DJI_SOURCE` and `DJI_DEST` from `.env`; flags override them.
+Without flags it uses `SD_SOURCE` and `SD_DEST` from `.env`; flags override them.
 
 ## Configuration
 
-All settings live in `.env`, which is not tracked by git. Create it from the template with `cp .env.example .env` and **edit it before installing**: set at least `DJI_USER` and `DJI_DEST`.
+All settings live in `.env`, which is not tracked by git. Create it from the template with `cp .env.example .env` and **edit it before installing**: set at least `SD_USER` and `SD_DEST`.
 
 | Variable | Meaning | Required / default |
 |----------|---------|--------------------|
-| `DJI_USER` | user the import runs as (owner of the copied files), not root | **required** |
-| `DJI_DEST` | destination folder, absolute path | **required** |
-| `DJI_UUID` | react only to the card with this UUID (`blkid /dev/sdX1`) | empty = any vfat/exfat card |
-| `DJI_SOURCE` | DCIM folder on the card, for manual runs | `/mnt/sd/DCIM` |
-| `DJI_TIMEOUT` | run time limit of one import | `2h` |
-| `DJI_LIBDIR` | where the script is installed (the log goes to its `log/` subfolder) | `/usr/local/lib/dji-import` |
+| `SD_USER` | user the import runs as (owner of the copied files), not root | **required** |
+| `SD_DEST` | destination folder, absolute path | **required** |
+| `SD_UUID` | react only to the card with this UUID (`blkid /dev/sdX1`) | empty = any vfat/exfat card |
+| `SD_SOURCE` | DCIM folder on the card, for manual runs | `/mnt/sd/DCIM` |
+| `SD_TIMEOUT` | run time limit of one import | `2h` |
+| `SD_LIBDIR` | where the script is installed (the log goes to its `log/` subfolder) | `/usr/local/lib/dji-import` |
 
 Settings are baked into the systemd unit at install time, so re-run `install.sh` after editing `.env`.
 
@@ -46,7 +46,7 @@ Settings are baked into the systemd unit at install time, so re-run `install.sh`
 
 ```sh
 cp .env.example .env
-nano .env          # set DJI_USER and DJI_DEST
+nano .env          # set SD_USER and SD_DEST
 sudo ./install.sh
 ```
 
@@ -64,7 +64,7 @@ Then insert the card and watch the progress:
 journalctl -f -u 'dji-import@*'
 ```
 
-Uninstall (copied files are left untouched; the script and its log in `DJI_LIBDIR` are removed):
+Uninstall (copied files are left untouched; the script and its log in `SD_LIBDIR` are removed):
 
 ```sh
 sudo ./uninstall.sh
@@ -75,7 +75,7 @@ sudo ./uninstall.sh
 - udev detects a `vfat`/`exfat` partition appearing (`sdX1` from a USB card reader or `mmcblkXpY` from a built-in slot) and starts `dji-import@<device>.service`.
 - The unit mounts the partition at `/mnt/sd-<device>` with the user's `uid`/`gid`, runs the script, then unmounts and removes the mount point. This happens on failure too.
 - If the device is already mounted (desktop automount, `/boot` on an SD card), the unit fails and touches nothing. On a desktop, disable automounting for this card or use the manual run.
-- The run time limit (`DJI_TIMEOUT`, 2 hours by default) is enough for large cards.
+- The run time limit (`SD_TIMEOUT`, 2 hours by default) is enough for large cards.
 - If the card is pulled mid-copy, the unit stops. Files already sorted into a dated folder on the card are not copied again automatically; copy them manually or move them back out of the folder first.
 
 ## Limitations

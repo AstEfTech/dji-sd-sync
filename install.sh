@@ -9,21 +9,21 @@ die() { echo "error: $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0"
 here=$(cd "$(dirname "$0")" && pwd)
-[ -f "$here/.env" ] || die "missing $here/.env - run: cp .env.example .env, then fill in DJI_USER and DJI_DEST"
+[ -f "$here/.env" ] || die "missing $here/.env - run: cp .env.example .env, then fill in SD_USER and SD_DEST"
 . "$here/.env"
 
 # required
-USER_NAME=${DJI_USER:-}
-DEST=${DJI_DEST:-}
-[ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || die "set DJI_USER (not root) in .env"
-[ -n "$DEST" ] || die "set DJI_DEST in .env"
+USER_NAME=${SD_USER:-}
+DEST=${SD_DEST:-}
+[ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || die "set SD_USER (not root) in .env"
+[ -n "$DEST" ] || die "set SD_DEST in .env"
 id "$USER_NAME" >/dev/null 2>&1 || die "no such user: $USER_NAME"
-case $DEST in /*) ;; *) die "DJI_DEST must be an absolute path" ;; esac
+case $DEST in /*) ;; *) die "SD_DEST must be an absolute path" ;; esac
 
 # optional / advanced
-UUID=${DJI_UUID:-}
-TIMEOUT=${DJI_TIMEOUT:-2h}
-LIBDIR=${DJI_LIBDIR:-/usr/local/lib/dji-import}
+UUID=${SD_UUID:-}
+TIMEOUT=${SD_TIMEOUT:-2h}
+LIBDIR=${SD_LIBDIR:-/usr/local/lib/dji-import}
 UNIT=/etc/systemd/system/dji-import@.service
 RULES=/etc/udev/rules.d/99-dji-sd.rules
 # values are substituted via sed into the unit - reject characters that would break the substitution

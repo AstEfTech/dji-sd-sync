@@ -9,7 +9,7 @@ if [ -f "$here/.env" ]; then . "$here/.env"; fi
 
 systemctl stop 'dji-import@*' 2>/dev/null || :
 rm -f /etc/udev/rules.d/99-dji-sd.rules /etc/systemd/system/dji-import@.service
-rm -rf "${DJI_LIBDIR:-/usr/local/lib/dji-import}"
+rm -rf "${SD_LIBDIR:-/usr/local/lib/dji-import}"
 
 systemctl daemon-reload
 udevadm control --reload-rules

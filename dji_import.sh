@@ -3,14 +3,14 @@
 # Pure POSIX sh, no dependencies beyond basic utilities (cp, mv, mkdir, wc, sync).
 #
 #   dji_import.sh [-s DCIM] [-d DEST]
-#   DJI_SOURCE / DJI_DEST come from .env next to this script (if present); flags override them.
+#   SD_SOURCE / SD_DEST come from .env next to this script (if present); flags override them.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
 if [ -f "$here/.env" ]; then . "$here/.env"; fi
 
-SOURCE=${DJI_SOURCE:-/mnt/sd/DCIM}
-DEST=${DJI_DEST:-$HOME/storage/dji}
+SOURCE=${SD_SOURCE:-/mnt/sd/DCIM}
+DEST=${SD_DEST:-$HOME/storage/dji}
 
 while getopts s:d: opt; do
     case $opt in
@@ -21,7 +21,7 @@ while getopts s:d: opt; do
 done
 
 # the log goes to stdout (journal) and to log/import.log next to this script
-# (DJI_LIBDIR/log when installed); if that folder is not writable, only stdout is used
+# (SD_LIBDIR/log when installed); if that folder is not writable, only stdout is used
 LOGFILE=$here/log/import.log
 mkdir -p "$here/log" 2>/dev/null || :
 log() {
