@@ -5,18 +5,17 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
 ## What it does
 
 1. Looks for `DCIM/DJI_*` on the card.
-2. Sorts `DJI_YYYYMMDD…` files into `YYYY-MM-DD` subfolders on the card itself. Dates are properly validated (leap years, month 13, etc.); unrelated files stay where they are.
-3. Copies only the folders that received loose files in this run (folders sorted by earlier runs are not touched), keeping the same structure:
-   - via a temporary `.part` file and `mv`, so an incomplete file never looks finished;
-   - a file with the same size is skipped;
-   - file modification times are preserved.
+2. For each loose `DJI_YYYYMMDD…` file (dates are validated: leap years, month 13, etc.; unrelated files stay where they are):
+   - copies it to `<DEST>/YYYY-MM-DD/` via a temporary `.part` file and `mv`, so an incomplete file never looks finished; the size is checked after copying and file modification times are preserved;
+   - **only after a successful copy** moves it into a `YYYY-MM-DD` subfolder on the card.
+3. Resumes after an interruption: files not yet copied are still loose on the card and get copied next time; a file that is already in `DEST` with the same size is not copied again, only moved on the card. If a file cannot be moved on the card (e.g. write-protected), a warning is logged and the import continues.
 4. Runs `sync`. **Files on the card are never deleted.**
 5. Writes a timestamped log to `log/import.log` next to the script (`SD_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
 
 ```
-card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
- ->    DCIM/DJI_001/2024-10-15/DJI_20241015100000_0001_D.MP4
- ->    <DEST>/2024-10-15/DJI_20241015100000_0001_D.MP4
+card:     DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
+1) copy -> <DEST>/2024-10-15/DJI_20241015100000_0001_D.MP4
+2) move -> DCIM/DJI_001/2024-10-15/DJI_20241015100000_0001_D.MP4
 ```
 
 ## Manual run
@@ -76,7 +75,7 @@ sudo ./uninstall.sh
 - The unit mounts the partition at `/mnt/sd-<device>` with the user's `uid`/`gid`, runs the script, then unmounts and removes the mount point. This happens on failure too.
 - If the device is already mounted (desktop automount, `/boot` on an SD card), the unit fails and touches nothing. On a desktop, disable automounting for this card or use the manual run.
 - The run time limit (`SD_TIMEOUT`, 2 hours by default) is enough for large cards.
-- If the card is pulled mid-copy, the unit stops. Files already sorted into a dated folder on the card are not copied again automatically; copy them manually or move them back out of the folder first.
+- If the card is pulled mid-copy, the unit stops; the next time the card is inserted, the files that were not finished are still loose on the card and are copied then.
 
 ## Limitations
 

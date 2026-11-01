@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sorts DJI files on an SD card into YYYY-MM-DD folders and copies them to a local folder.
+# Copies loose DJI files from an SD card to DEST/YYYY-MM-DD/, then moves each copied file into a YYYY-MM-DD folder on the card.
 # Pure POSIX sh, no dependencies beyond basic utilities (cp, mv, mkdir, wc, sync).
 #
 #   dji_import.sh [-s DCIM] [-d DEST]
@@ -63,23 +63,6 @@ date_dir_name() {
     printf '%s-%s-%s' "$y" "$m" "$d"
 }
 
-# group_by_date DIR - moves DJI_YYYYMMDD* files from DIR into DIR/YYYY-MM-DD/
-# and appends the names of the folders that received files to $touched
-group_by_date() {
-    for f in "$1"/*; do
-        [ -f "$f" ] || continue
-        name=${f##*/}
-        if sub=$(date_dir_name "$name"); then
-            mkdir -p "$1/$sub" || fail "cannot create $1/$sub (card write-protected?)"
-            mv -- "$f" "$1/$sub/$name" || fail "cannot move $f -> $1/$sub/$name (card write-protected?)"
-            case " $touched " in *" $sub "*) ;; *) touched="$touched $sub" ;; esac
-            log "move $f -> $1/$sub/$name"
-        else
-            log "skip $name: not a dated DJI file"
-        fi
-    done
-}
-
 # copy_file SRC DST -> 0 if copied, 1 if already present with the same size
 copy_file() {
     if [ -f "$2" ] && [ "$(wc -c < "$1")" -eq "$(wc -c < "$2")" ]; then
@@ -90,34 +73,50 @@ copy_file() {
         rm -f -- "$2.part"
         fail "cannot copy $1 -> $2 (disk full or no write access to the destination?)"
     fi
+    if [ "$(wc -c < "$1")" -ne "$(wc -c < "$2.part")" ]; then
+        rm -f -- "$2.part"
+        fail "size mismatch after copying $1 -> $2"
+    fi
     mv -f -- "$2.part" "$2" || fail "cannot rename $2.part -> $2"
     log "copy $1 -> $2"
 }
 
+# import_dir DIR - for every loose DJI_YYYYMMDD* file in DIR: copy it to DEST/YYYY-MM-DD/,
+# and only after a successful copy move it into DIR/YYYY-MM-DD/ on the card.
+# An interrupted run leaves the unfinished files loose, so the next run resumes with them.
+import_dir() {
+    for f in "$1"/*; do
+        [ -f "$f" ] || continue
+        name=${f##*/}
+        if ! sub=$(date_dir_name "$name"); then
+            log "skip $name: not a dated DJI file"
+            continue
+        fi
+        mkdir -p "$DEST/$sub" || fail "cannot create $DEST/$sub"
+        if copy_file "$f" "$DEST/$sub/$name"; then
+            copied=$((copied + 1))
+        else
+            skipped=$((skipped + 1))
+        fi
+        # the copy is safe in DEST; failing to tidy the card is not fatal, it is retried next time
+        if mkdir -p "$1/$sub" && mv -- "$f" "$1/$sub/$name"; then
+            log "move $f -> $1/$sub/$name"
+        else
+            log "WARNING: cannot move $f -> $1/$sub/$name (card write-protected?)"
+            unmoved=$((unmoved + 1))
+        fi
+    done
+}
+
 [ -d "$SOURCE" ] || { log "$SOURCE not found -> not a DJI card, nothing to do"; exit 0; }
 
-copied=0 skipped=0 found=0
+copied=0 skipped=0 unmoved=0 found=0
 for card_dir in "$SOURCE"/DJI_*; do
     [ -d "$card_dir" ] || continue
     found=1
-    touched=
-    group_by_date "$card_dir"
-    # copy only the folders that received loose files in this run;
-    # folders sorted by earlier runs are left alone
-    for sub in $touched; do
-        dated=$card_dir/$sub
-        mkdir -p "$DEST/$sub" || fail "cannot create $DEST/$sub"
-        for f in "$dated"/*; do
-            [ -f "$f" ] || continue
-            if copy_file "$f" "$DEST/$sub/${f##*/}"; then
-                copied=$((copied + 1))
-            else
-                skipped=$((skipped + 1))
-            fi
-        done
-    done
+    import_dir "$card_dir"
 done
 
 [ "$found" -eq 1 ] || { log "No DJI_* folders in $SOURCE -> nothing to do"; exit 0; }
 sync
-log "Done: copied $copied, already present $skipped"
+log "Done: copied $copied, already present $skipped, not moved on the card $unmoved"
