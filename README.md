@@ -6,11 +6,12 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
 
 1. Looks for `DCIM/DJI_*` on the card.
 2. Sorts `DJI_YYYYMMDD…` files into `YYYY-MM-DD` subfolders on the card itself. Dates are properly validated (leap years, month 13, etc.); unrelated files stay where they are.
-3. Copies all dated folders to the destination folder, keeping the same structure:
+3. Copies only the folders that received loose files in this run (folders sorted by earlier runs are not touched), keeping the same structure:
    - via a temporary `.part` file and `mv`, so an incomplete file never looks finished;
-   - a file with the same size is skipped, so re-running is safe and picks up whatever was not copied yet;
+   - a file with the same size is skipped;
    - file modification times are preserved.
 4. Runs `sync`. **Files on the card are never deleted.**
+5. Writes a timestamped log to `log/import.log` next to the script (`DJI_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
 
 ```
 card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
@@ -38,7 +39,7 @@ All settings live in `.env`, which is not tracked by git. Create it from the tem
 | `DJI_SOURCE` | DCIM folder on the card, for manual runs | `/mnt/sd/DCIM` |
 | `DJI_TIMEOUT` | run time limit of one import | `2h` |
 | `DJI_MOUNT_PREFIX` | mount point prefix (device name is appended) | `/mnt/sd-` |
-| `DJI_LIBDIR` | where the script is installed | `/usr/local/lib/dji-import` |
+| `DJI_LIBDIR` | where the script is installed (the log goes to its `log/` subfolder) | `/usr/local/lib/dji-import` |
 | `DJI_UNIT` | installed systemd unit path | `/etc/systemd/system/dji-import@.service` |
 | `DJI_RULES` | installed udev rule path | `/etc/udev/rules.d/99-dji-sd.rules` |
 
@@ -78,7 +79,7 @@ sudo ./uninstall.sh
 - The unit mounts the partition at `/mnt/sd-<device>` with the user's `uid`/`gid`, runs the script, then unmounts and removes the mount point. This happens on failure too.
 - If the device is already mounted (desktop automount, `/boot` on an SD card), the unit fails and touches nothing. On a desktop, disable automounting for this card or use the manual run.
 - The run time limit (`DJI_TIMEOUT`, 2 hours by default) is enough for large cards.
-- If the card is pulled mid-copy, the unit stops; the next time the card is inserted, the remaining files are copied.
+- If the card is pulled mid-copy, the unit stops. Files already sorted into a dated folder on the card are not copied again automatically; copy them manually or move them back out of the folder first.
 
 ## Limitations
 

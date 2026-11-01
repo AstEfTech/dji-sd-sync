@@ -1,2 +1,5 @@
 # local settings (copy from .env.example)
 .env
+
+# import log written when running the script from this folder
+log/

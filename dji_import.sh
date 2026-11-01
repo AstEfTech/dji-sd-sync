@@ -20,7 +20,19 @@ while getopts s:d: opt; do
     esac
 done
 
-log() { printf '%s\n' "$*"; }
+# the log goes to stdout (journal) and to log/import.log next to this script
+# (DJI_LIBDIR/log when installed); if that folder is not writable, only stdout is used
+LOGFILE=$here/log/import.log
+mkdir -p "$here/log" 2>/dev/null || :
+log() {
+    printf '%s\n' "$*"
+    printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>/dev/null || :
+}
+fail() {
+    printf 'ERROR: %s\n' "$*" >&2
+    printf '%s ERROR: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>/dev/null || :
+    exit 1
+}
 
 # is_valid_date YYYY MM DD -> 0 if such a date exists
 is_valid_date() {
@@ -52,13 +64,15 @@ date_dir_name() {
 }
 
 # group_by_date DIR - moves DJI_YYYYMMDD* files from DIR into DIR/YYYY-MM-DD/
+# and appends the names of the folders that received files to $touched
 group_by_date() {
     for f in "$1"/*; do
         [ -f "$f" ] || continue
         name=${f##*/}
         if sub=$(date_dir_name "$name"); then
-            mkdir -p "$1/$sub"
-            mv -- "$f" "$1/$sub/$name"
+            mkdir -p "$1/$sub" || fail "cannot create $1/$sub (card write-protected?)"
+            mv -- "$f" "$1/$sub/$name" || fail "cannot move $f -> $1/$sub/$name (card write-protected?)"
+            case " $touched " in *" $sub "*) ;; *) touched="$touched $sub" ;; esac
             log "move $f -> $1/$sub/$name"
         else
             log "skip $name: not a dated DJI file"
@@ -72,8 +86,11 @@ copy_file() {
         return 1
     fi
     # copy via .part so an incomplete file never looks finished
-    cp -p -- "$1" "$2.part"
-    mv -f -- "$2.part" "$2"
+    if ! cp -p -- "$1" "$2.part"; then
+        rm -f -- "$2.part"
+        fail "cannot copy $1 -> $2 (disk full or no write access to the destination?)"
+    fi
+    mv -f -- "$2.part" "$2" || fail "cannot rename $2.part -> $2"
     log "copy $1 -> $2"
 }
 
@@ -83,13 +100,13 @@ copied=0 skipped=0 found=0
 for card_dir in "$SOURCE"/DJI_*; do
     [ -d "$card_dir" ] || continue
     found=1
+    touched=
     group_by_date "$card_dir"
-    # copy every dated folder: if a previous run was interrupted after sorting,
-    # the files still get copied; already-copied ones are skipped by size
-    for dated in "$card_dir"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]; do
-        [ -d "$dated" ] || continue
-        sub=${dated##*/}
-        mkdir -p "$DEST/$sub"
+    # copy only the folders that received loose files in this run;
+    # folders sorted by earlier runs are left alone
+    for sub in $touched; do
+        dated=$card_dir/$sub
+        mkdir -p "$DEST/$sub" || fail "cannot create $DEST/$sub"
         for f in "$dated"/*; do
             [ -f "$f" ] || continue
             if copy_file "$f" "$DEST/$sub/${f##*/}"; then

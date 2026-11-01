@@ -39,6 +39,8 @@ done
 su -s /bin/sh -c "mkdir -p '$DEST'" "$USER_NAME" || die "cannot create $DEST as $USER_NAME"
 
 install -Dm755 "$here/dji_import.sh" "$LIBDIR/dji_import.sh"
+# the import runs as the target user, so the log folder must belong to them
+install -d -m755 -o "$USER_NAME" "$LIBDIR/log"
 sed -e "s|@USER@|$USER_NAME|g" -e "s|@DEST@|$DEST|g" -e "s|@LIBDIR@|$LIBDIR|g" \
     -e "s|@TIMEOUT@|$TIMEOUT|g" -e "s|@MNT@|$MNT|g" \
     "$here/dji-import@.service" > "$UNIT.tmp"
