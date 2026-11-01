@@ -20,19 +20,28 @@ while getopts s:d: opt; do
     esac
 done
 
-# the log goes to stdout (journal) and to log/YYYY-MM-DD_HH-MM-SS.log (one file per run, named by its start time) next to this script
+# everything the script prints goes to stdout (journal) and to log/YYYY-MM-DD_HH-MM-SS.log (one file per run, named by its start time) next to this script
 # (SD_LIBDIR/log when installed); if that folder is not writable, only stdout is used
-LOGFILE=$here/log/$(date +%Y-%m-%d_%H-%M-%S).log
-mkdir -p "$here/log" 2>/dev/null || :
-log() {
-    printf '%s\n' "$*"
-    printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>/dev/null || :
-}
-fail() {
-    printf 'ERROR: %s\n' "$*" >&2
-    printf '%s ERROR: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOGFILE" 2>/dev/null || :
-    exit 1
-}
+LOGDIR=$here/log
+LOGFILE=$LOGDIR/$(date +%Y-%m-%d_%H-%M-%S).log
+if mkdir -p "$LOGDIR" 2>/dev/null && : >> "$LOGFILE" 2>/dev/null; then
+    # duplicate everything the script prints (stdout + stderr, including errors from cp/mv/mkdir)
+    # into the log file: tee reads from a fifo and keeps writing to the original stdout (journal)
+    fifo=$LOGDIR/.fifo.$$
+    if mkfifo "$fifo" 2>/dev/null; then
+        # tee ignores TERM/INT/HUP so it still writes the last lines when systemd stops the unit
+        ( trap '' TERM INT HUP; exec tee -a "$LOGFILE" < "$fifo" ) &
+        teepid=$!
+        exec > "$fifo" 2>&1
+        rm -f "$fifo"
+        # closing our side of the fifo lets tee finish; wait so the tail of the log is not lost
+        trap 'exec >&- 2>&-; wait "$teepid"' EXIT
+    fi
+fi
+log() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+fail() { log "ERROR: $*"; exit 1; }
+# unit stopped (card pulled, timeout) or Ctrl+C: say so in the log, then run the EXIT trap
+trap 'log "ERROR: interrupted (card removed, timeout or stop)"; exit 1' TERM INT HUP
 
 # is_valid_date YYYY MM DD -> 0 if such a date exists
 is_valid_date() {
