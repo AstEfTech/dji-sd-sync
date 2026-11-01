@@ -10,7 +10,7 @@ Automatic import of DJI footage from an SD card on Linux. Insert the card and th
    - **only after a successful copy** moves it into a `YYYY-MM-DD` subfolder on the card.
 3. Resumes after an interruption: files not yet copied are still loose on the card and get copied next time; a file that is already in `DEST` with the same size is not copied again, only moved on the card. If a file cannot be moved on the card (e.g. write-protected), a warning is logged and the import continues.
 4. Runs `sync`. **Files on the card are never deleted.**
-5. Writes a timestamped log to `log/import.log` next to the script (`SD_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
+5. Writes a timestamped log to `log/YYYY-MM-DD_HH-MM-SS.log` (one file per run) next to the script (`SD_LIBDIR/log` when installed) and to stdout; errors are logged as `ERROR: …`.
 
 ```
 card:     DCIM/DJI_001/DJI_20241015100000_0001_D.MP4

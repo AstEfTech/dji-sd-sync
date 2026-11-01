@@ -20,9 +20,9 @@ while getopts s:d: opt; do
     esac
 done
 
-# the log goes to stdout (journal) and to log/import.log next to this script
+# the log goes to stdout (journal) and to log/YYYY-MM-DD_HH-MM-SS.log (one file per run, named by its start time) next to this script
 # (SD_LIBDIR/log when installed); if that folder is not writable, only stdout is used
-LOGFILE=$here/log/import.log
+LOGFILE=$here/log/$(date +%Y-%m-%d_%H-%M-%S).log
 mkdir -p "$here/log" 2>/dev/null || :
 log() {
     printf '%s\n' "$*"
