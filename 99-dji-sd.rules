@@ -1,0 +1,9 @@
+# SD card in a USB card reader
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*[0-9]", ENV{ID_BUS}=="usb", ENV{ID_FS_TYPE}=="vfat|exfat", TAG+="systemd", ENV{SYSTEMD_WANTS}+="dji-import@%k.service"
+
+# SD card in a built-in slot
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="mmcblk[0-9]*p[0-9]*", ENV{ID_FS_TYPE}=="vfat|exfat", TAG+="systemd", ENV{SYSTEMD_WANTS}+="dji-import@%k.service"
+
+# To react to one specific card only, replace the rules above with a single UUID rule
+# (find the UUID with: blkid /dev/sdX1):
+# ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="XXXX-XXXX", TAG+="systemd", ENV{SYSTEMD_WANTS}+="dji-import@%k.service"
