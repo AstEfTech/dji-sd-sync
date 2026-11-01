@@ -3,8 +3,11 @@
 # Pure POSIX sh, no dependencies beyond basic utilities (cp, mv, mkdir, wc, sync).
 #
 #   dji_import.sh [-s DCIM] [-d DEST]
-#   DJI_SOURCE / DJI_DEST - the same settings via environment variables
+#   DJI_SOURCE / DJI_DEST come from .env next to this script (if present); flags override them.
 set -eu
+
+here=$(cd "$(dirname "$0")" && pwd)
+if [ -f "$here/.env" ]; then . "$here/.env"; fi
 
 SOURCE=${DJI_SOURCE:-/mnt/sd/DCIM}
 DEST=${DJI_DEST:-$HOME/storage/dji}

@@ -1,40 +1,35 @@
 #!/bin/sh
 # Installs dji-import as a service: a udev rule plus a templated systemd unit.
+# All settings come from .env next to this script - edit it first, then run:
 #
-#   sudo ./install.sh [-u USER] [-d DEST] [-U UUID]
-#     -u USER  user to copy as (default: the user who invoked sudo)
-#     -d DEST  destination folder (default: ~USER/storage/dji)
-#     -U UUID  react only to the card with this UUID (blkid /dev/sdX1); without it, any vfat/exfat card
+#   sudo ./install.sh
 set -eu
-
-LIBDIR=/usr/local/lib/dji-import
-UNIT=/etc/systemd/system/dji-import@.service
-RULES=/etc/udev/rules.d/99-dji-sd.rules
 
 die() { echo "error: $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0"
 here=$(cd "$(dirname "$0")" && pwd)
+[ -f "$here/.env" ] || die "missing $here/.env - run: cp .env.example .env, then fill in DJI_USER and DJI_DEST"
+. "$here/.env"
 
-USER_NAME=${SUDO_USER:-}
-DEST=
-UUID=
-while getopts u:d:U: opt; do
-    case $opt in
-        u) USER_NAME=$OPTARG ;;
-        d) DEST=$OPTARG ;;
-        U) UUID=$OPTARG ;;
-        *) die "usage: $0 [-u USER] [-d DEST] [-U UUID]" ;;
-    esac
-done
-
-[ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || die "specify the target user with -u USER"
+# required
+USER_NAME=${DJI_USER:-}
+DEST=${DJI_DEST:-}
+[ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || die "set DJI_USER (not root) in .env"
+[ -n "$DEST" ] || die "set DJI_DEST in .env"
 id "$USER_NAME" >/dev/null 2>&1 || die "no such user: $USER_NAME"
-home=$(getent passwd "$USER_NAME" | cut -d: -f6)
-[ -n "$DEST" ] || DEST=$home/storage/dji
-case $DEST in /*) ;; *) die "DEST must be an absolute path" ;; esac
+case $DEST in /*) ;; *) die "DJI_DEST must be an absolute path" ;; esac
+
+# optional / advanced
+UUID=${DJI_UUID:-}
+TIMEOUT=${DJI_TIMEOUT:-2h}
+MNT=${DJI_MOUNT_PREFIX:-/mnt/sd-}
+LIBDIR=${DJI_LIBDIR:-/usr/local/lib/dji-import}
+UNIT=${DJI_UNIT:-/etc/systemd/system/dji-import@.service}
+RULES=${DJI_RULES:-/etc/udev/rules.d/99-dji-sd.rules}
+case $MNT in /*) ;; *) die "DJI_MOUNT_PREFIX must be an absolute path" ;; esac
 # values are substituted via sed into the unit - reject characters that would break the substitution
-case $DEST$USER_NAME$UUID in *[\|\&\\\ \"\']*) die "spaces/quotes/|&\\ are not allowed in USER, DEST, UUID" ;; esac
+case $DEST$USER_NAME$UUID$LIBDIR$TIMEOUT$MNT in *[\|\&\\\ \"\']*) die "spaces/quotes/|&\\ are not allowed in .env values" ;; esac
 
 for f in dji_import.sh dji-import@.service 99-dji-sd.rules; do
     [ -f "$here/$f" ] || die "missing $here/$f"
@@ -45,6 +40,7 @@ su -s /bin/sh -c "mkdir -p '$DEST'" "$USER_NAME" || die "cannot create $DEST as 
 
 install -Dm755 "$here/dji_import.sh" "$LIBDIR/dji_import.sh"
 sed -e "s|@USER@|$USER_NAME|g" -e "s|@DEST@|$DEST|g" -e "s|@LIBDIR@|$LIBDIR|g" \
+    -e "s|@TIMEOUT@|$TIMEOUT|g" -e "s|@MNT@|$MNT|g" \
     "$here/dji-import@.service" > "$UNIT.tmp"
 chmod 644 "$UNIT.tmp" && mv "$UNIT.tmp" "$UNIT"
 

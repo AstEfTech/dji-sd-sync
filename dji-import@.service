@@ -6,12 +6,12 @@ After=dev-%i.device
 [Service]
 Type=oneshot
 User=@USER@
-TimeoutStartSec=2h
+TimeoutStartSec=@TIMEOUT@
 # leave the device alone if it is already mounted elsewhere (e.g. /boot on SD or a desktop automount)
 ExecStartPre=+/bin/sh -c '! findmnt -rn -S /dev/%i'
-ExecStartPre=+/bin/mkdir -p /mnt/sd-%i
+ExecStartPre=+/bin/mkdir -p @MNT@%i
 # the kernel accepts only numeric uid=/gid=, so resolve the name via id ($$ escapes $ for systemd)
-ExecStartPre=+/bin/sh -c 'exec mount -o uid=$$(id -u @USER@),gid=$$(id -g @USER@),umask=022 /dev/%i /mnt/sd-%i'
-ExecStart=/bin/sh @LIBDIR@/dji_import.sh -s /mnt/sd-%i/DCIM -d @DEST@
-ExecStopPost=-+/bin/umount /mnt/sd-%i
-ExecStopPost=-+/bin/rmdir /mnt/sd-%i
+ExecStartPre=+/bin/sh -c 'exec mount -o uid=$$(id -u @USER@),gid=$$(id -g @USER@),umask=022 /dev/%i @MNT@%i'
+ExecStart=/bin/sh @LIBDIR@/dji_import.sh -s @MNT@%i/DCIM -d @DEST@
+ExecStopPost=-+/bin/umount @MNT@%i
+ExecStopPost=-+/bin/rmdir @MNT@%i

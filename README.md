@@ -24,19 +24,33 @@ card:  DCIM/DJI_001/DJI_20241015100000_0001_D.MP4
 sh dji_import.sh -s /mnt/sd/DCIM -d ~/storage/dji
 ```
 
-Or use the `DJI_SOURCE` and `DJI_DEST` environment variables. Defaults: `/mnt/sd/DCIM` and `~/storage/dji`.
+Without flags it uses `DJI_SOURCE` and `DJI_DEST` from `.env`; flags override them.
+
+## Configuration
+
+All settings live in `.env`, which is not tracked by git. Create it from the template with `cp .env.example .env` and **edit it before installing**: set at least `DJI_USER` and `DJI_DEST`.
+
+| Variable | Meaning | Required / default |
+|----------|---------|--------------------|
+| `DJI_USER` | user the import runs as (owner of the copied files), not root | **required** |
+| `DJI_DEST` | destination folder, absolute path | **required** |
+| `DJI_UUID` | react only to the card with this UUID (`blkid /dev/sdX1`) | empty = any vfat/exfat card |
+| `DJI_SOURCE` | DCIM folder on the card, for manual runs | `/mnt/sd/DCIM` |
+| `DJI_TIMEOUT` | run time limit of one import | `2h` |
+| `DJI_MOUNT_PREFIX` | mount point prefix (device name is appended) | `/mnt/sd-` |
+| `DJI_LIBDIR` | where the script is installed | `/usr/local/lib/dji-import` |
+| `DJI_UNIT` | installed systemd unit path | `/etc/systemd/system/dji-import@.service` |
+| `DJI_RULES` | installed udev rule path | `/etc/udev/rules.d/99-dji-sd.rules` |
+
+Settings are baked into the systemd unit at install time, so re-run `install.sh` after editing `.env`.
 
 ## Installing as a service
 
 ```sh
-sudo ./install.sh -u your_username -d /home/your_username/storage/dji
+cp .env.example .env
+nano .env          # set DJI_USER and DJI_DEST
+sudo ./install.sh
 ```
-
-| Flag | Meaning | Default |
-|------|---------|---------|
-| `-u USER` | user to copy as (owner of the files) | the user who invoked `sudo` |
-| `-d DEST` | destination folder, absolute path | `~USER/storage/dji` |
-| `-U UUID` | react only to the card with this UUID (`blkid /dev/sdX1`) | any vfat/exfat card |
 
 What gets installed:
 
@@ -63,7 +77,7 @@ sudo ./uninstall.sh
 - udev detects a `vfat`/`exfat` partition appearing (`sdX1` from a USB card reader or `mmcblkXpY` from a built-in slot) and starts `dji-import@<device>.service`.
 - The unit mounts the partition at `/mnt/sd-<device>` with the user's `uid`/`gid`, runs the script, then unmounts and removes the mount point. This happens on failure too.
 - If the device is already mounted (desktop automount, `/boot` on an SD card), the unit fails and touches nothing. On a desktop, disable automounting for this card or use the manual run.
-- The run time limit is 2 hours, which is enough for large cards.
+- The run time limit (`DJI_TIMEOUT`, 2 hours by default) is enough for large cards.
 - If the card is pulled mid-copy, the unit stops; the next time the card is inserted, the remaining files are copied.
 
 ## Limitations
