@@ -67,7 +67,7 @@ Then insert the card and watch the progress:
 journalctl -f -u 'dji-import@*'
 ```
 
-Uninstall (copied files are left untouched):
+Uninstall (copied files are left untouched; the script and its log in `DJI_LIBDIR` are removed):
 
 ```sh
 sudo ./uninstall.sh

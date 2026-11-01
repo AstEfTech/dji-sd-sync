@@ -7,6 +7,7 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 if [ -f "$here/.env" ]; then . "$here/.env"; fi
 
+systemctl stop 'dji-import@*' 2>/dev/null || :
 rm -f "${DJI_RULES:-/etc/udev/rules.d/99-dji-sd.rules}" "${DJI_UNIT:-/etc/systemd/system/dji-import@.service}"
 rm -rf "${DJI_LIBDIR:-/usr/local/lib/dji-import}"
 
