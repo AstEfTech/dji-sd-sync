@@ -23,13 +23,11 @@ case $DEST in /*) ;; *) die "DJI_DEST must be an absolute path" ;; esac
 # optional / advanced
 UUID=${DJI_UUID:-}
 TIMEOUT=${DJI_TIMEOUT:-2h}
-MNT=${DJI_MOUNT_PREFIX:-/mnt/sd-}
 LIBDIR=${DJI_LIBDIR:-/usr/local/lib/dji-import}
-UNIT=${DJI_UNIT:-/etc/systemd/system/dji-import@.service}
-RULES=${DJI_RULES:-/etc/udev/rules.d/99-dji-sd.rules}
-case $MNT in /*) ;; *) die "DJI_MOUNT_PREFIX must be an absolute path" ;; esac
+UNIT=/etc/systemd/system/dji-import@.service
+RULES=/etc/udev/rules.d/99-dji-sd.rules
 # values are substituted via sed into the unit - reject characters that would break the substitution
-case $DEST$USER_NAME$UUID$LIBDIR$TIMEOUT$MNT in *[\|\&\\\ \"\']*) die "spaces/quotes/|&\\ are not allowed in .env values" ;; esac
+case $DEST$USER_NAME$UUID$LIBDIR$TIMEOUT in *[\|\&\\\ \"\']*) die "spaces/quotes/|&\\ are not allowed in .env values" ;; esac
 
 for f in dji_import.sh dji-import@.service 99-dji-sd.rules; do
     [ -f "$here/$f" ] || die "missing $here/$f"
@@ -42,7 +40,7 @@ install -Dm755 "$here/dji_import.sh" "$LIBDIR/dji_import.sh"
 # the import runs as the target user, so the log folder must belong to them
 install -d -m755 -o "$USER_NAME" "$LIBDIR/log"
 sed -e "s|@USER@|$USER_NAME|g" -e "s|@DEST@|$DEST|g" -e "s|@LIBDIR@|$LIBDIR|g" \
-    -e "s|@TIMEOUT@|$TIMEOUT|g" -e "s|@MNT@|$MNT|g" \
+    -e "s|@TIMEOUT@|$TIMEOUT|g" \
     "$here/dji-import@.service" > "$UNIT.tmp"
 chmod 644 "$UNIT.tmp" && mv "$UNIT.tmp" "$UNIT"
 

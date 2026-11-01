@@ -38,10 +38,7 @@ All settings live in `.env`, which is not tracked by git. Create it from the tem
 | `DJI_UUID` | react only to the card with this UUID (`blkid /dev/sdX1`) | empty = any vfat/exfat card |
 | `DJI_SOURCE` | DCIM folder on the card, for manual runs | `/mnt/sd/DCIM` |
 | `DJI_TIMEOUT` | run time limit of one import | `2h` |
-| `DJI_MOUNT_PREFIX` | mount point prefix (device name is appended) | `/mnt/sd-` |
 | `DJI_LIBDIR` | where the script is installed (the log goes to its `log/` subfolder) | `/usr/local/lib/dji-import` |
-| `DJI_UNIT` | installed systemd unit path | `/etc/systemd/system/dji-import@.service` |
-| `DJI_RULES` | installed udev rule path | `/etc/udev/rules.d/99-dji-sd.rules` |
 
 Settings are baked into the systemd unit at install time, so re-run `install.sh` after editing `.env`.
 
